@@ -1,8 +1,23 @@
-# Legion - Fast Project-Specific Development VMs
+# Legion - Sandboxed Development Environments for AI Tools
 
-A highly optimized Lima VM system with direct kernel boot, custom rootfs, and project-specific VM management. Designed for fast boot times and seamless development workflow with Claude Code integration.
+Legion is a sandbox and egress filtering utility for macOS designed specifically for AI coding assistants like Claude Code. It provides isolated development environments that run without constant permission checks while preventing access to internal networks and sensitive resources.
 
-**Boot time: ~2-3 seconds** (kernel: 117ms, userspace: ~2s, cloud-init: ~1s)
+Built on years of experience with Kata Containers and microVM technologies, Legion uses a custom kernel and rootfs to achieve fast boot times (~2-3 seconds) while maintaining strong isolation guarantees. Each project gets its own ephemeral VM with controlled network access via egress filtering policies.
+
+**Why Legion?**
+- 🛡️ **Security**: Run AI tools without exposing internal networks or host resources
+- 🚫 **Network isolation**: Egress filtering prevents access to private subnets and metadata services
+- ⚡ **Fast**: Boot times of ~2-3 seconds (kernel: 117ms, userspace: ~2s, cloud-init: ~1s)
+- 🔒 **Sandboxed**: Each project runs in its own isolated VM
+- 🤖 **AI-optimized**: Pre-configured for Claude Code with minimal permission prompts
+- 🔧 **Customizable**: Network policies, rootfs contents, and Lima VM configuration are all modifiable
+
+**Customization**
+
+Legion is designed to be highly customizable for different security and development requirements:
+- **Network policy** (`policy.yaml`): Define egress filtering rules, allowed/blocked domains, IP ranges, and protocols
+- **Rootfs contents** (`build-rootfs/`): Customize the base image with your own tools, packages, and configurations
+- **VM configuration** (`legion.yaml`): Adjust CPU, memory, mounts, provisioning scripts, and Lima microVM capabilities
 
 ## Features
 
@@ -13,11 +28,44 @@ A highly optimized Lima VM system with direct kernel boot, custom rootfs, and pr
 - 🔒 **Isolated networking**: Custom network with egress filtering support
 - 🔄 **Auto-cleanup**: VMs cleaned up on exit unless already running
 - 📁 **Workspace mounting**: Project directory automatically mounted to `/workspace`
+- 🐛 **Debug mode**: Optional `--debug` flag shows VM lifecycle and timing info
+
+## Installation
+
+### Build Prerequisites
+- macOS with Apple Silicon (ARM64)
+- Lima's docker VM running (`limactl start docker`)
+- Make
+
+### Build and Install
+
+```bash
+# Clone the repository
+git clone <repo-url>
+cd legion
+
+# Build all components
+make build-kernel build-rootfs build-limactl
+
+# Install legion commands globally (optional)
+make install-legion
+```
+
+After installation, you can run `legion` and `legion-limactl` from any directory.
+
+### Uninstall
+
+```bash
+make uninstall-legion
+```
 
 ## Quick Start
 
 ```bash
-# From any project directory:
+# From any project directory (if installed globally):
+legion
+
+# Or using the script directly:
 ./legion.sh
 
 # This creates a project-specific VM and opens a shell
@@ -25,9 +73,15 @@ A highly optimized Lima VM system with direct kernel boot, custom rootfs, and pr
 # Workspace: current directory mounted to /workspace
 
 # Run a command:
-./legion.sh echo "hello from VM"
+legion echo "hello from VM"
 
 # The VM is automatically cleaned up when the command completes
+
+# Debug mode (show timing and status):
+legion --debug
+
+# Shell into running VM from another terminal:
+legion shell
 ```
 
 ## Components
@@ -111,19 +165,6 @@ Total disk usage: ~1.2GB of 1.5GB allocated
    - Preserves running VMs across invocations
 
 ## Building
-
-### Prerequisites
-- macOS with Apple Silicon (ARM64)
-- Lima's docker VM running (`limactl start docker`)
-- Make
-
-### Build Everything
-```bash
-# Full clean rebuild
-make clean
-rm -rf _output
-make build-kernel build-rootfs build-limactl
-```
 
 ### Build Individual Components
 ```bash

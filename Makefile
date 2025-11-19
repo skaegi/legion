@@ -9,7 +9,7 @@ LEGION_LIMACTL := $(OUTPUT_DIR)/bin/legion-limactl
 # Rootfs build parameters (can be overridden: make build-rootfs BASE_IMAGE=ubuntu:24.10)
 BASE_IMAGE ?= ubuntu:24.04
 
-.PHONY: all build-kernel build-rootfs build-limactl test start stop clean validate
+.PHONY: all build-kernel build-rootfs build-limactl install-legion uninstall-legion test start stop clean validate
 
 all: build-rootfs
 
@@ -69,6 +69,45 @@ build-limactl: $(OUTPUT_DIR)
 	cp /tmp/lima-build/_output/share/lima/lima-guestagent.Linux-*.gz $(OUTPUT_DIR)/share/lima/
 	@ls -lh $(OUTPUT_DIR)/bin/legion-limactl $(OUTPUT_DIR)/share/lima/
 	@echo "Done! Custom limactl and guestagent created"
+
+# Install legion commands globally
+install-legion:
+	@echo "Installing legion commands to /usr/local/bin/..."
+	@if [ ! -f "$(LEGION_LIMACTL)" ]; then \
+		echo "Error: legion-limactl not found. Run 'make build-limactl' first."; \
+		exit 1; \
+	fi
+	@mkdir -p /usr/local/bin
+	@if [ -L /usr/local/bin/legion ]; then \
+		echo "Removing existing legion symlink..."; \
+		rm /usr/local/bin/legion; \
+	elif [ -e /usr/local/bin/legion ]; then \
+		echo "Error: /usr/local/bin/legion exists but is not a symlink"; \
+		exit 1; \
+	fi
+	@if [ -L /usr/local/bin/legion-limactl ]; then \
+		echo "Removing existing legion-limactl symlink..."; \
+		rm /usr/local/bin/legion-limactl; \
+	elif [ -e /usr/local/bin/legion-limactl ]; then \
+		echo "Error: /usr/local/bin/legion-limactl exists but is not a symlink"; \
+		exit 1; \
+	fi
+	ln -s "$(shell pwd)/legion.sh" /usr/local/bin/legion
+	ln -s "$(shell pwd)/$(LEGION_LIMACTL)" /usr/local/bin/legion-limactl
+	@echo "Done! You can now run 'legion' and 'legion-limactl' from any directory."
+
+# Uninstall legion commands
+uninstall-legion:
+	@echo "Uninstalling legion commands from /usr/local/bin/..."
+	@if [ -L /usr/local/bin/legion ]; then \
+		rm /usr/local/bin/legion; \
+		echo "Removed legion command."; \
+	fi
+	@if [ -L /usr/local/bin/legion-limactl ]; then \
+		rm /usr/local/bin/legion-limactl; \
+		echo "Removed legion-limactl command."; \
+	fi
+	@echo "Done!"
 
 # Validate the Lima template
 validate:
