@@ -1,0 +1,50 @@
+# Legion - Custom kernel/initrd Lima template
+# Basic template for direct kernel boot with custom kernel and initrd
+
+vmType: "vz"
+arch: "aarch64"
+
+# Image configuration with custom kernel and initrd
+images:
+- location: "_output/legion-rootfs.img"
+  arch: "aarch64"
+
+  # Custom kernel for direct kernel boot (uncompressed with ISO9660 support)
+  kernel:
+    location: "_output/legion-vmlinux"
+    arch: "aarch64"
+    cmdline: "console=ttyAMA0 console=hvc0 root=/dev/vda1 rw"
+
+# VM resources
+cpus: 4
+memory: "4GiB"
+disk: "20GiB"
+
+# Disable containerd auto-installation
+containerd:
+  system: false
+  user: false
+
+provision:
+- mode: system
+  script: |
+    #!/bin/bash
+    set -eux -o pipefail
+    chown -R {{.User}}:{{.User}} /usr/local/share
+    groupadd -f docker
+    usermod -aG docker {{.User}}
+    (dockerd > /dev/null 2>&1)&
+- mode: user
+  file: user-provision.sh
+
+# Mounts
+mounts:
+- location: "~/.legion/.init"
+  mountPoint: "{{.Home}}/.legion/.init"
+  writable: true
+- location: "~/.legion/.defaults"
+  mountPoint: "{{.Home}}/.legion/.defaults"
+  writable: false
+- location: "~/.legion/.credentials"
+  mountPoint: "{{.Home}}/.legion/.credentials"
+  writable: true

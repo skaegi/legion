@@ -1,0 +1,45 @@
+ARG BASE_IMAGE=ubuntu:24.04
+
+FROM ${BASE_IMAGE} AS rootfs-builder
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    busybox-static \
+    systemd \
+    systemd-sysv \
+    systemd-resolved \
+    libpam-systemd \
+    udev \
+    cloud-init \
+    cloud-guest-utils \
+    openssh-server \
+    sudo \
+    iproute2 \
+    iputils-ping \
+    curl \
+    ca-certificates \
+    kmod \
+    netbase \
+    init \
+    rsync \
+    && apt-get clean
+
+# Create disk image
+FROM ubuntu:24.04 AS disk-builder
+
+# Install tools needed for disk creation
+RUN apt-get update && apt-get install -y e2fsprogs fdisk && rm -rf /var/lib/apt/lists/*
+
+# Copy rootfs and configuration scripts
+COPY --from=rootfs-builder / /rootfs
+COPY configure-rootfs.sh create-disk-image.sh /tmp/
+
+# Configure rootfs and create disk image
+# Partition size = rootfs size + 100MB headroom, disk size = partition + 20MB
+RUN chmod +x /tmp/configure-rootfs.sh /tmp/create-disk-image.sh && \
+    /tmp/configure-rootfs.sh /rootfs && \
+    /tmp/create-disk-image.sh /rootfs /legion-rootfs.img
+
+FROM scratch
+COPY --from=disk-builder /legion-rootfs.img /legion-rootfs.img

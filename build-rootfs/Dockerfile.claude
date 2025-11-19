@@ -1,0 +1,70 @@
+FROM node:24-slim
+
+# Avoid prompts during package installation
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Install base system tools and dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    # Core utilities
+    curl \
+    wget \
+    git \
+    vim \
+    less \
+    procps \
+    psmisc \
+    sudo \
+    gosu \
+    tini \
+    # Text processing & search
+    jq \
+    ripgrep \
+    fzf \
+    bc \
+    # Build tools
+    build-essential \
+    python3 \
+    # Network tools
+    iputils-ping \
+    dnsutils \
+    iproute2 \
+    aggregate \
+    socat \
+    lsof \
+    # Version control & GitHub
+    gh \
+    # Docker
+    docker.io \
+    iptables \
+    # SSL certificates
+    ca-certificates \
+    # Archive utilities
+    unzip \
+    zip \
+    # File utilities
+    tree \
+    rsync \
+    # System monitoring
+    htop \
+    btop \
+    # GPG
+    gnupg2 \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN mkdir -p /usr/local/share/npm-global  /workspace
+
+# Update node environment
+ENV NPM_CONFIG_PREFIX=/usr/local/share/npm-global
+ENV PATH=$PATH:/usr/local/share/npm-global/bin
+
+# Configure npm environment for VM users via profile.d
+RUN mkdir -p /etc/profile.d && \
+    echo 'export NPM_CONFIG_PREFIX=/usr/local/share/npm-global' > /etc/profile.d/npm-global.sh && \
+    echo 'export PATH=$PATH:/usr/local/share/npm-global/bin' >> /etc/profile.d/npm-global.sh && \
+    chmod +x /etc/profile.d/npm-global.sh
+
+# Install claude-code and devcontainer CLI
+RUN npm install -g @anthropic-ai/claude-code @devcontainers/cli
+
+

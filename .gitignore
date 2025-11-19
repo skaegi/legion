@@ -1,0 +1,8 @@
+# Build artifacts
+_output/
+
+# macOS
+.DS_Store
+
+# Claude data
+.claude/
