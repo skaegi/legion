@@ -13,10 +13,31 @@ if [ "$1" = "--debug" ]; then
     shift
 fi
 
-# Debug echo function
 debug_echo() {
     if [ "$DEBUG" = true ]; then
         echo "$@"
+    fi
+}
+
+setup_credentials() {
+    LEGION_CREDS="$HOME/.legion/.credentials"
+    if CREDS=$(security find-generic-password -s "Claude Code-credentials" -w 2>/dev/null) && [ -n "$CREDS" ]; then
+        echo "$CREDS" > "$LEGION_CREDS/.credentials.json"
+    fi
+    if [ -f "$HOME/.claude.json" ] && command -v jq >/dev/null 2>&1; then
+        if OAUTH=$(jq -r '.oauthAccount // empty' "$HOME/.claude.json" 2>/dev/null) && [ -n "$OAUTH" ]; then
+            echo "$OAUTH" > "$LEGION_CREDS/.oauthAccount.json"
+        fi
+    fi
+}
+
+cleanup_vm() {
+    if [ "$VM_STARTED" = true ]; then
+        debug_echo "Deleting VM $vm_name..."
+        (
+            "$LEGION_LIMACTL" delete --force --log-level error "$vm_name"
+            debug_echo "Legion VM cleaned up."
+        )&
     fi
 }
 
@@ -61,17 +82,6 @@ fi
 
 # Track whether we started the VM (for cleanup)
 VM_STARTED=false
-
-# Cleanup hook - only stop/delete if we started the VM
-cleanup_vm() {
-    if [ "$VM_STARTED" = true ]; then
-        debug_echo "Stopping VM $vm_name..."
-        "$LEGION_LIMACTL" stop --log-level error "$vm_name"
-        debug_echo "Deleting VM $vm_name..."
-        "$LEGION_LIMACTL" delete --log-level error "$vm_name"
-        debug_echo "Legion VM cleaned up."
-    fi
-}
 trap cleanup_vm EXIT
 
 # Check if VM is already running
@@ -79,12 +89,14 @@ if "$LEGION_LIMACTL" list | grep -q "^$vm_name.*Running"; then
     debug_echo "VM $vm_name is already running."
 elif "$LEGION_LIMACTL" list | grep -q "^$vm_name"; then
     debug_echo "VM $vm_name exists but is not running. Starting it..."
+    setup_credentials
     TIMEFORMAT='%3R'
     duration=$( { time "$LEGION_LIMACTL" start -y --log-level error "$vm_name" ; } 2>&1 )
     debug_echo "VM started in ${duration}s"
     VM_STARTED=true
 else
     debug_echo "Creating and starting VM $vm_name..."
+    setup_credentials
     TIMEFORMAT='%3R'
     duration=$( { time "$LEGION_LIMACTL" start -y --log-level error --network lima:legion --name="$vm_name" \
         --set ".images[0].location=\"$SCRIPT_DIR/_output/legion-rootfs.img\"" \
@@ -104,3 +116,6 @@ else
     debug_echo "Running command in VM $vm_name: $*"
     "$LEGION_LIMACTL" shell --workdir /workspace "$vm_name" "$@"
 fi
+
+# Turn off bracket paste after shell exits
+printf '\e[?2004l'

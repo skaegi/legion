@@ -51,3 +51,10 @@ else
     fi
 fi
 
+# Merge oauthAccount if available
+if [ -f "$HOME/.legion/.credentials/.oauthAccount.json" ] && command -v jq >/dev/null 2>&1; then
+    OAUTH=$(cat "$HOME/.legion/.credentials/.oauthAccount.json")
+    jq --argjson oauth "$OAUTH" '.oauthAccount = $oauth' "$HOME/.claude/.claude.json" > "$HOME/.claude/.claude.json.tmp"
+    mv "$HOME/.claude/.claude.json.tmp" "$HOME/.claude/.claude.json"
+fi
+

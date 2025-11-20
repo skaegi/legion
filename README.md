@@ -36,6 +36,7 @@ Legion is designed to be highly customizable for different security and developm
 - macOS with Apple Silicon (ARM64)
 - Lima's docker VM running (`limactl start docker`)
 - Make
+- Claude Pro or Max subscription (for AI assistant integration)
 
 ### Build and Install
 
