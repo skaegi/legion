@@ -91,6 +91,7 @@ legion shell
 - `legion.yaml` - Lima template configuration (source of truth)
 - `legion.sh` - VM lifecycle management wrapper
 - `policy.yaml` - Network policy for legion network
+- `system-provision.sh` - System-mode provision script (Docker setup)
 - `user-provision.sh` - User-mode provision script for Claude setup
 
 ### Build Directories
@@ -194,9 +195,9 @@ make build-limactl
 ```bash
 # Runs once during VM creation
 - Creates ~/.claude directory
-- Copies .claude.json from ~/.legion/.init if exists
-- Merges defaults from ~/.legion/.defaults
-- Sets up credential symlinks
+- Copies .claude.json from ~/.legion/.init/.claude if exists
+- Merges config files from ~/.legion/.config/.claude
+- Sets up credential and OAuth symlinks from ~/.legion/.credentials/.claude
 - Handles initialization vs normal mode
 ```
 
@@ -204,13 +205,21 @@ make build-limactl
 
 ```
 ~/.legion/
-  .init/              # Initial configuration (writable)
-    .claude.json      # Claude config (created on first run)
-  .defaults/          # Default files to merge (read-only)
-  .credentials/       # Credential storage (writable)
-    .credentials.json # Claude credentials
-  <project>_<hash>/   # Per-project VM instance data
+  .init/                        # Initial configuration (writable)
+    .claude/                    # Claude-specific init
+      .claude.json              # Initial Claude config (created on first run)
+  .config/                      # Configuration files (read-only)
+    .claude/                    # Claude-specific config
+      settings.json             # Synced from ~/.claude/settings.json
+      statusline.sh             # Synced from ~/.claude/statusline.sh
+  .credentials/                 # Credential storage (writable)
+    .claude/                    # Claude-specific credentials
+      .credentials.json         # From macOS keychain
+      .oauthAccount.json        # Extracted from ~/.claude.json
+  <project>_<hash>/             # Per-project VM instance data
 ```
+
+The structure is organized to support multiple AI tools, with each tool having its own subdirectory under `.init/`, `.config/`, and `.credentials/`.
 
 ## Networking
 
